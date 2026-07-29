@@ -890,14 +890,31 @@
   // ── AI Modal ─────────────────────────────────────────────────────────────
   let generatedAiFile = null;
 
-  $('ai-modal-open-btn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    $('ai-modal').style.display = 'flex';
-  });
+  const modalEl = $('ai-modal');
+  const openBtn = $('ai-modal-open-btn');
+  const closeBtn = $('ai-modal-close');
+  const cancelBtn = $('ai-cancel-btn');
 
-  const closeAiModal = () => { $('ai-modal').style.display = 'none'; };
-  $('ai-modal-close').addEventListener('click', closeAiModal);
-  $('ai-cancel-btn').addEventListener('click', closeAiModal);
+  if (openBtn && modalEl) {
+    openBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      modalEl.style.display = 'flex';
+    });
+  }
+
+  const closeAiModal = () => {
+    if (modalEl) modalEl.style.display = 'none';
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeAiModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeAiModal);
+
+  // Close modal when clicking outside the content container
+  if (modalEl) {
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) closeAiModal();
+    });
+  }
 
   document.querySelectorAll('.ai-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -905,48 +922,53 @@
     });
   });
 
-  $('ai-generate-btn').addEventListener('click', async () => {
-    const promptText = $('ai-prompt-input').value.trim();
-    if (!promptText) {
-      alert('Lütfen geçerli bir kural cümlesi yazın.');
-      return;
-    }
-    const btn = $('ai-generate-btn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Üretiliyor...';
+  const genBtn = $('ai-generate-btn');
+  if (genBtn) {
+    genBtn.addEventListener('click', async () => {
+      const promptText = $('ai-prompt-input').value.trim();
+      if (!promptText) {
+        alert('Lütfen geçerli bir kural cümlesi yazın.');
+        return;
+      }
+      genBtn.disabled = true;
+      genBtn.textContent = '⏳ Üretiliyor...';
 
-    try {
-      const apiKey = $('ai-api-key').value.trim();
-      const res = await fetch('/api/ai/generate-rules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptText, api_key: apiKey || null })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Yapay zeka yanıt vermedi.');
+      try {
+        const apiKey = $('ai-api-key').value.trim();
+        const res = await fetch('/api/ai/generate-rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: promptText, api_key: apiKey || null })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Yapay zeka yanıt vermedi.');
 
-      // Create synthetic File object from YAML content
-      const blob = new Blob([data.yaml_content], { type: 'text/yaml' });
-      generatedAiFile = new File([blob], 'ai_generated_rules.yaml', { type: 'text/yaml' });
-      
-      // Override rules-file input in DOM
-      const dt = new DataTransfer();
-      dt.items.add(generatedAiFile);
-      $('rules-file').files = dt.files;
+        // Create synthetic File object from YAML content
+        const blob = new Blob([data.yaml_content], { type: 'text/yaml' });
+        generatedAiFile = new File([blob], 'ai_generated_rules.yaml', { type: 'text/yaml' });
+        
+        // Override rules-file input in DOM
+        const dt = new DataTransfer();
+        dt.items.add(generatedAiFile);
+        $('rules-file').files = dt.files;
 
-      $('rules-name').textContent = `✨ AI Kuralı: ai_generated_rules.yaml (${data.source === 'gemini' ? 'Google Gemini' : 'Smart NLP'})`;
-      $('rules-name').style.display = 'block';
-      $('rules-card').classList.add('has-file');
+        $('rules-name').textContent = `✨ AI Kuralı: ai_generated_rules.yaml (${data.source === 'gemini' ? 'Google Gemini' : 'Akıllı Derleyici'})`;
+        $('rules-name').style.display = 'block';
+        $('rules-card').classList.add('has-file');
 
-      alert(`✅ Kural Dosyası Başarıyla Üretildi! (${data.source === 'gemini' ? 'Google Gemini 1.5' : 'Akıllı Derleyici'})`);
-      closeAiModal();
-    } catch (err) {
-      alert('Hata: ' + err.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '🪄 Yapay Zekâ İle YAML Üret';
-    }
-  });
+        // Enable validate button
+        $('validate-btn').disabled = false;
+
+        alert(`✅ Kural Dosyası Başarıyla Üretildi! (${data.source === 'gemini' ? 'Google Gemini 1.5' : 'Akıllı Derleyici'})`);
+        closeAiModal();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = '🪄 Yapay Zekâ İle YAML Üret';
+      }
+    });
+  }
 </script>
 
 <!-- ── AI Rule Generator Modal ── -->
