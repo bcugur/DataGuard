@@ -69,8 +69,8 @@ MAX_THRESHOLD: Final[float] = 1.0
 MIN_SCORE: Final[float] = 0.0
 MAX_SCORE: Final[float] = 1.0
 
-SUPPORTED_FILE_EXTENSIONS: Final[tuple[str, ...]] = (".csv", ".json")
-"""File extensions supported by the infrastructure readers in MVP."""
+SUPPORTED_FILE_EXTENSIONS: Final[tuple[str, ...]] = (".csv", ".json", ".xlsx", ".xls")
+"""File extensions supported by the infrastructure readers in DataGuard."""
 
 YAML_RULE_VERSION: Final[str] = "1.0"
 """Expected 'version' field value in a rule YAML file."""

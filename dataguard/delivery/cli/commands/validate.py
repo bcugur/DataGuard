@@ -22,6 +22,7 @@ from dataguard.application.dtos.validation_request import ValidationRequest
 from dataguard.application.use_cases.run_validation import RunValidationUseCase
 from dataguard.infrastructure.notifiers.console_notifier import ConsoleNotifier
 from dataguard.infrastructure.readers.csv_reader import CSVReader
+from dataguard.infrastructure.readers.excel_reader import ExcelReader
 from dataguard.infrastructure.readers.json_reader import JSONReader
 from dataguard.infrastructure.repositories.file_rule_repo import FileRuleRepository
 from dataguard.infrastructure.writers.json_writer import JSONReportWriter
@@ -34,26 +35,16 @@ logger = get_logger(__name__)
 _error_console = Console(stderr=True)
 
 
-def _resolve_reader(source: Path) -> CSVReader | JSONReader:
-    """Select the correct data reader based on the file extension.
-
-    Args:
-        source: Path to the data source file.
-
-    Returns:
-        The appropriate IDataReader implementation.
-
-    Raises:
-        typer.Exit: If no reader supports the given extension.
-    """
-    readers: list[CSVReader | JSONReader] = [CSVReader(), JSONReader()]
+def _resolve_reader(source: Path) -> CSVReader | JSONReader | ExcelReader:
+    """Select the correct data reader based on the file extension."""
+    readers: list[CSVReader | JSONReader | ExcelReader] = [CSVReader(), JSONReader(), ExcelReader()]
     for reader in readers:
         if reader.supports(source):
             return reader
 
     _error_console.print(
         f"[bold red]✗ Unsupported file format:[/bold red] '{source.suffix}'. "
-        f"Supported: .csv, .json"
+        f"Supported: .csv, .json, .xlsx, .xls"
     )
     raise typer.Exit(code=2)
 

@@ -23,6 +23,7 @@ from dataguard.domain.rules.completeness import CompletenessRule
 from dataguard.domain.rules.uniqueness import UniquenessRule
 from dataguard.domain.rules.validity import ValidityRule
 from dataguard.infrastructure.readers.csv_reader import CSVReader
+from dataguard.infrastructure.readers.excel_reader import ExcelReader
 from dataguard.infrastructure.readers.json_reader import JSONReader
 from dataguard.infrastructure.repositories.file_rule_repo import FileRuleRepository
 from dataguard.infrastructure.writers.json_writer import JSONReportWriter
@@ -158,7 +159,12 @@ async def validate(request: Request) -> JSONResponse:
                 tmp_rules_path = Path(tmp_r.name)
 
         # ── Select reader ──────────────────────────────────────────────────
-        reader = CSVReader() if data_suffix == ".csv" else JSONReader()
+        if data_suffix in (".xlsx", ".xls"):
+            reader = ExcelReader()
+        elif data_suffix == ".json":
+            reader = JSONReader()
+        else:
+            reader = CSVReader()
 
         # ── Load rules + dataset ───────────────────────────────────────────
         rule_repo = FileRuleRepository()

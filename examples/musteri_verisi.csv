@@ -1,0 +1,7 @@
+﻿musteri_id,ad_soyad,eposta,yas,durum
+101,Ahmet Yılmaz,ahmet@domain.com,28,Aktif
+102,Ayşe Şahin,ayse.sahin@firma.com,35,Pasif
+103,Mehmet Demir,hatali-eposta,150,Beklemede
+104,,canan@mail.com,42,Aktif
+105,Canan Kaya,burak@test.com,19,GEÇERSİZ_DURUM
+105,Burak Yıldız,zeynep@demo.com,-5,Aktif

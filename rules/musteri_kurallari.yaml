@@ -1,0 +1,66 @@
+# DataGuard Kural Dosyası — Müşteri Verisi Doğrulama
+# Versiyon: 1.0
+
+version: "1.0"
+
+rules:
+  # ── 1. Tamlık (Completeness) Kuralları ────────────────────────────────────
+  - id: rule_001
+    name: ad_soyad_tamlik
+    type: completeness
+    column: ad_soyad
+    threshold: 0.90              # En az %90 dolu olmalı (1 boş var -> %83 -> BAŞARISIZ)
+    severity: error
+
+  - id: rule_002
+    name: musteri_id_tamlik
+    type: completeness
+    column: musteri_id
+    threshold: 1.0               # Müşteri ID hiç boş olamaz
+    severity: error
+
+  # ── 2. Tekrarsızlık (Uniqueness) Kuralları ──────────────────────────────────
+  - id: rule_003
+    name: musteri_id_benzersizlik
+    type: uniqueness
+    column: musteri_id
+    threshold: 1.0               # Müşteri ID %100 benzersiz olmalı (105 tekrar ediyor -> BAŞARISIZ)
+    severity: error
+
+  # ── 3. Geçerlilik (Validity) Kuralları ────────────────────────────────────
+  # 3a. Enum (İzin Verilen Değerler) Kontrolü
+  - id: rule_004
+    name: durum_enum_gecerlilik
+    type: validity
+    column: durum
+    validator: enum
+    params:
+      allowed_values:
+        - Aktif
+        - Pasif
+        - Beklemede
+    threshold: 1.0               # 'GEÇERSİZ_DURUM' olduğu için BAŞARISIZ olacak
+    severity: warning
+
+  # 3b. Range (Sayısal Aralık) Kontrolü
+  - id: rule_005
+    name: yas_aralik_gecerlilik
+    type: validity
+    column: yas
+    validator: range
+    params:
+      min_value: 18
+      max_value: 99
+    threshold: 0.90              # Yaş 18-99 arasında olmalı (-5 ve 150 var -> BAŞARISIZ)
+    severity: warning
+
+  # 3c. Regex (Format Kalıbı) Kontrolü
+  - id: rule_006
+    name: eposta_format_gecerlilik
+    type: validity
+    column: eposta
+    validator: regex
+    params:
+      pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+    threshold: 0.90              # E-posta formatına uymalı ('hatali-eposta' var)
+    severity: error

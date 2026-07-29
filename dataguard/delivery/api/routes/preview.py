@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from dataguard.infrastructure.readers.csv_reader import CSVReader
+from dataguard.infrastructure.readers.excel_reader import ExcelReader
 from dataguard.infrastructure.readers.json_reader import JSONReader
 from dataguard.shared.logging import get_logger
 
@@ -60,10 +61,10 @@ async def preview(request: Request) -> JSONResponse:
 
     data_suffix = Path(data_file.filename).suffix.lower()
 
-    if data_suffix not in (".csv", ".json"):
+    if data_suffix not in (".csv", ".json", ".xlsx", ".xls"):
         raise HTTPException(
             status_code=400,
-            detail=f"Desteklenmeyen format '{data_suffix}'. Kabul edilen: .csv, .json",
+            detail=f"Desteklenmeyen format '{data_suffix}'. Kabul edilen: .csv, .json, .xlsx, .xls",
         )
 
     tmp_path: Path | None = None
@@ -76,7 +77,12 @@ async def preview(request: Request) -> JSONResponse:
             tmp.write(data_bytes)
             tmp_path = Path(tmp.name)
 
-        reader = CSVReader() if data_suffix == ".csv" else JSONReader()
+        if data_suffix in (".xlsx", ".xls"):
+            reader = ExcelReader()
+        elif data_suffix == ".json":
+            reader = JSONReader()
+        else:
+            reader = CSVReader()
         dataset = reader.read(tmp_path)
 
         columns = []
