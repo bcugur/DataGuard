@@ -657,7 +657,10 @@
     } catch(e) { console.error('Preview error', e); }
   }
 
+  let lastPreviewColumns = [];
+
   function renderPreview(columns) {
+    lastPreviewColumns = columns.map(c => c.name);
     const grid = $('columns-grid');
     grid.innerHTML = '';
     columns.forEach(col => {
@@ -973,7 +976,7 @@
         const res = await fetch('/api/ai/generate-rules', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: promptText, api_key: apiKey || null })
+          body: JSON.stringify({ prompt: promptText, columns: lastPreviewColumns, api_key: apiKey || null })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Yapay zeka yanıt vermedi.');

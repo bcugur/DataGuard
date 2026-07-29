@@ -18,7 +18,6 @@ from dataguard.shared.logging import get_logger
 
 logger = get_logger(__name__)
 
-# System prompt instructing Gemini to produce strict DataGuard YAML schema 1.0
 SYSTEM_PROMPT = """Sen DataGuard Veri Kalitesi Platformu için kural üreten uzman bir yapay zekâ asistansısın.
 Kullanıcının doğal dilde belirttiği veri doğrulama isteklerini incele ve SADECE geçerli DataGuard YAML kural dosyasını döndür.
 
@@ -50,6 +49,7 @@ Kurallar:
 1. Cevabında ekstra açıklama, selamlama veya markdown tırnakları (```yaml) BULUNMASIN. Sadece ham YAML metni döndür.
 2. Desteklenen validator tipleri: 'tckn' (TC Kimlik), 'vkn' (Vergi No), 'tr_iban' (TR IBAN), 'phone_tr' (Telefon), 'enum', 'range', 'regex'.
 3. Her kural için benzersiz bir id (rule_001, rule_002) ataması yap.
+4. EĞER Mevcut Veri Sütunları verilmişse, kurallardaki 'column' alanında SADECE verilen sütun adlarını tam olarak kullan!
 """
 
 
@@ -57,24 +57,22 @@ class AIRuleGeneratorService:
     """Generates DataGuard QualityRule YAML from natural language instructions."""
 
     @staticmethod
-    def generate(prompt: str, api_key: str | None = None) -> tuple[str, str]:
-        """Generate YAML rules from prompt.
-
-        Args:
-            prompt: Natural language description of validation rules in Turkish or English.
-            api_key: Optional Google Gemini API key (Free Tier).
-
-        Returns:
-            Tuple of (yaml_content, source_used) where source_used is 'gemini' or 'smart_nlp'.
-        """
+    def generate(
+        prompt: str,
+        dataset_columns: list[str] | None = None,
+        api_key: str | None = None,
+    ) -> tuple[str, str]:
+        """Generate YAML rules from prompt and dataset column context."""
         prompt_clean = prompt.strip()
         if not prompt_clean:
             raise ValueError("Lütfen açıklayıcı bir kural isteği girin.")
 
-        # Try Gemini API if key is provided or present in environment
+        cols = [str(c).strip() for c in dataset_columns if str(c).strip()] if dataset_columns else []
+
+        # Try Gemini API if key is provided
         if api_key:
             try:
-                yaml_str = AIRuleGeneratorService._call_gemini_api(prompt_clean, api_key)
+                yaml_str = AIRuleGeneratorService._call_gemini_api(prompt_clean, cols, api_key)
                 if yaml_str and "version:" in yaml_str:
                     logger.info("Successfully generated YAML rules via Google Gemini API.")
                     return yaml_str, "gemini"
@@ -82,19 +80,22 @@ class AIRuleGeneratorService:
                 logger.warning("Gemini API call failed (%s). Falling back to Smart NLP Synthesizer.", e)
 
         # Fallback to Smart NLP Synthesizer
-        yaml_str = AIRuleGeneratorService._synthesize_smart_nlp(prompt_clean)
+        yaml_str = AIRuleGeneratorService._synthesize_smart_nlp(prompt_clean, cols)
         return yaml_str, "smart_nlp"
 
     @staticmethod
-    def _call_gemini_api(prompt: str, api_key: str) -> str:
+    def _call_gemini_api(prompt: str, cols: list[str], api_key: str) -> str:
         """Call Google Gemini 1.5 Flash REST API (Free Tier)."""
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        cols_text = f"\nMevcut Veri Sütunları: {cols}" if cols else ""
+        user_text = f"Kullanıcı İsteği: {prompt}{cols_text}"
+
         payload = {
             "contents": [
                 {
                     "parts": [
                         {"text": SYSTEM_PROMPT},
-                        {"text": f"Kullanıcı İsteği: {prompt}"},
+                        {"text": user_text},
                     ]
                 }
             ],
@@ -120,25 +121,38 @@ class AIRuleGeneratorService:
             raise RuntimeError("Gemini API yanıt vermedi.")
 
         text_content = candidates[0]["content"]["parts"][0]["text"]
-        # Clean markdown codeblocks if present
         clean_yaml = re.sub(r"^```(?:yaml)?\n", "", text_content, flags=re.MULTILINE)
         clean_yaml = re.sub(r"\n```$", "", clean_yaml, flags=re.MULTILINE).strip()
         return clean_yaml
 
     @staticmethod
-    def _synthesize_smart_nlp(prompt: str) -> str:
+    def _synthesize_smart_nlp(prompt: str, cols: list[str]) -> str:
         """Synthesize valid DataGuard YAML using Turkish NLP pattern matcher."""
         prompt_lower = prompt.lower()
         rules: list[dict[str, Any]] = []
         rule_idx = 1
+        used_cols: set[str] = set()
 
-        # Extract words/columns referenced in prompt
-        # Common column names mentioned or general column patterns
         words = re.findall(r"\b[a-zA-Z0-9_çğıöşüÇĞİÖŞÜ]+\b", prompt)
+
+        # Helper to pick best column from dataset_columns or prompt words
+        def match_col(keywords: tuple[str, ...], default_name: str) -> str:
+            # 1. Search dataset_columns first
+            if cols:
+                for c in cols:
+                    c_lower = c.lower()
+                    if any(k in c_lower for k in keywords):
+                        return c
+            # 2. Search prompt words
+            for w in words:
+                w_lower = w.lower()
+                if any(k in w_lower for k in keywords):
+                    return w
+            return default_name
 
         # 1. TCKN Check
         if any(k in prompt_lower for k in ("tc", "tckn", "kimlik")):
-            col = AIRuleGeneratorService._find_col_name(words, ("tc", "tckn", "kimlik")) or "tc_kimlik"
+            col = match_col(("tc", "tckn", "kimlik"), "tc_kimlik")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_tckn_kontrolu",
@@ -148,11 +162,12 @@ class AIRuleGeneratorService:
                 "threshold": 1.0,
                 "severity": "error"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # 2. VKN Check
         if any(k in prompt_lower for k in ("vkn", "vergi")):
-            col = AIRuleGeneratorService._find_col_name(words, ("vkn", "vergi")) or "vergi_no"
+            col = match_col(("vkn", "vergi"), "vergi_no")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_vkn_kontrolu",
@@ -162,11 +177,12 @@ class AIRuleGeneratorService:
                 "threshold": 1.0,
                 "severity": "error"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # 3. IBAN Check
         if "iban" in prompt_lower:
-            col = AIRuleGeneratorService._find_col_name(words, ("iban",)) or "iban_no"
+            col = match_col(("iban",), "iban_no")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_iban_kontrolu",
@@ -176,11 +192,12 @@ class AIRuleGeneratorService:
                 "threshold": 1.0,
                 "severity": "error"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # 4. Telefon Check
         if any(k in prompt_lower for k in ("tel", "telefon", "phone", "gsm", "cep")):
-            col = AIRuleGeneratorService._find_col_name(words, ("tel", "telefon", "phone", "gsm")) or "telefon"
+            col = match_col(("tel", "telefon", "phone", "gsm"), "telefon")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_telefon_format_kontrolu",
@@ -190,11 +207,12 @@ class AIRuleGeneratorService:
                 "threshold": 1.0,
                 "severity": "warning"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # 5. Email Check
         if any(k in prompt_lower for k in ("eposta", "e-posta", "email", "mail")):
-            col = AIRuleGeneratorService._find_col_name(words, ("eposta", "email", "mail")) or "eposta"
+            col = match_col(("eposta", "email", "mail"), "eposta")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_eposta_format",
@@ -205,11 +223,16 @@ class AIRuleGeneratorService:
                 "threshold": 0.90,
                 "severity": "error"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # 6. Uniqueness Check
         if any(k in prompt_lower for k in ("tekrarsız", "benzersiz", "unique", "çakışma", "çakışmasın", "id")):
-            col = AIRuleGeneratorService._find_col_name(words, ("id", "kod", "key", "no")) or "musteri_id"
+            # If prompt mentions tckn/kimlik + benzersiz, target the TCKN column!
+            if any(k in prompt_lower for k in ("tc", "tckn", "kimlik")):
+                col = match_col(("tc", "tckn", "kimlik"), "tc_kimlik")
+            else:
+                col = match_col(("id", "kod", "key", "no"), "musteri_id")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_benzersizlik",
@@ -218,11 +241,12 @@ class AIRuleGeneratorService:
                 "threshold": 1.0,
                 "severity": "error"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # 7. Completeness Check
         if any(k in prompt_lower for k in ("tam", "boş", "null", "eksik", "dolu", "zorunlu")):
-            col = AIRuleGeneratorService._find_col_name(words, ("ad", "soyad", "isim", "musteri", "id")) or "ad_soyad"
+            col = match_col(("ad", "soyad", "isim", "musteri", "id"), "ad_soyad")
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_tamlik",
@@ -231,42 +255,59 @@ class AIRuleGeneratorService:
                 "threshold": 0.90,
                 "severity": "error"
             })
+            used_cols.add(col)
             rule_idx += 1
 
-        # 8. Range (Age / Amount) Check
-        range_match = re.search(r"(\d+)\s*(?:ile|-|veya)\s*(\d+)", prompt_lower)
-        if range_match or any(k in prompt_lower for k in ("yaş", "aralık", "tutar", "fiyat", "miktar")):
-            col = AIRuleGeneratorService._find_col_name(words, ("yaş", "yas", "tutar", "fiyat")) or "yas"
-            min_v = int(range_match.group(1)) if range_match else 18
-            max_v = int(range_match.group(2)) if range_match else 65
+        # 8. Range (Age / Amount / Salary) Check
+        range_match = re.search(r"(\d+)\s*(?:ile|-|veya|'den|den|'dan|dan)?\s*(?:küçük|büyük|arası|kadar|fazla)?", prompt_lower)
+        if any(k in prompt_lower for k in ("yaş", "yas", "tutar", "fiyat", "miktar", "maaş", "maas")):
+            col = match_col(("yaş", "yas", "tutar", "fiyat", "maaş", "maas"), "yas")
+            
+            # Detect range boundaries
+            numbers = [int(n) for n in re.findall(r"\b\d+\b", prompt)]
+            min_v = numbers[0] if numbers else 18
+            max_v = numbers[1] if len(numbers) > 1 else 99
+
+            params: dict[str, Any] = {}
+            if "küçük olmasın" in prompt_lower or "büyük" in prompt_lower or "en az" in prompt_lower:
+                params["min_value"] = min_v
+            elif "büyük olmasın" in prompt_lower or "küçük" in prompt_lower or "en çok" in prompt_lower:
+                params["max_value"] = min_v
+            else:
+                params["min_value"] = min_v
+                params["max_value"] = max_v
+
             rules.append({
                 "id": f"rule_{rule_idx:03d}",
                 "name": f"{col}_aralik_kontrolu",
                 "type": "validity",
                 "column": col,
                 "validator": "range",
-                "params": {"min_value": min_v, "max_value": max_v},
+                "params": params,
                 "threshold": 0.90,
                 "severity": "warning"
             })
+            used_cols.add(col)
             rule_idx += 1
 
         # Fallback default rules if no specific rules detected
         if not rules:
+            fallback_col1 = cols[0] if cols else "musteri_id"
+            fallback_col2 = cols[1] if len(cols) > 1 else "ad_soyad"
             rules = [
                 {
                     "id": "rule_001",
-                    "name": "musteri_id_benzersizlik",
+                    "name": f"{fallback_col1}_benzersizlik",
                     "type": "uniqueness",
-                    "column": "musteri_id",
+                    "column": fallback_col1,
                     "threshold": 1.0,
                     "severity": "error"
                 },
                 {
                     "id": "rule_002",
-                    "name": "ad_soyad_tamlik",
+                    "name": f"{fallback_col2}_tamlik",
                     "type": "completeness",
-                    "column": "ad_soyad",
+                    "column": fallback_col2,
                     "threshold": 0.90,
                     "severity": "error"
                 }
@@ -274,12 +315,3 @@ class AIRuleGeneratorService:
 
         doc = {"version": "1.0", "rules": rules}
         return yaml.dump(doc, allow_unicode=True, sort_keys=False)
-
-    @staticmethod
-    def _find_col_name(words: list[str], keywords: tuple[str, ...]) -> str | None:
-        """Find candidate column name matching keywords from prompt words."""
-        for w in words:
-            w_lower = w.lower()
-            if any(k in w_lower for k in keywords):
-                return w
-        return None

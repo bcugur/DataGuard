@@ -27,6 +27,7 @@ async def generate_rules(request: Request) -> JSONResponse:
         body = {}
 
     prompt = str(body.get("prompt", "")).strip()
+    columns = body.get("columns") or []
     api_key = body.get("api_key") or None
 
     if not prompt:
@@ -36,7 +37,9 @@ async def generate_rules(request: Request) -> JSONResponse:
         )
 
     try:
-        yaml_content, source = AIRuleGeneratorService.generate(prompt, api_key=api_key)
+        yaml_content, source = AIRuleGeneratorService.generate(
+            prompt, dataset_columns=columns, api_key=api_key
+        )
         return JSONResponse(
             {
                 "status": "success",
