@@ -541,9 +541,11 @@
     </div>
 
     <!-- Actions -->
-    <div class="actions">
+    <div class="actions" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:24px">
       <button class="action-btn" id="reset-btn">Yeni Doğrulama</button>
-      <button class="action-btn primary" id="download-btn">Raporu İndir (JSON)</button>
+      <button class="action-btn primary" id="download-clean-btn" style="background:#10b981">✨ Temiz Veriyi İndir (.xlsx)</button>
+      <button class="action-btn primary" id="download-quarantine-btn" style="background:#f59e0b">⚠️ Karantina Verisini İndir (.xlsx)</button>
+      <button class="action-btn" id="download-btn">Raporu İndir (JSON)</button>
     </div>
 
   </div>
@@ -821,6 +823,16 @@
     a.href = URL.createObjectURL(blob);
     a.download = `dataguard_report_${Date.now()}.json`;
     a.click();
+  });
+
+  $('download-clean-btn').addEventListener('click', () => {
+    if (!lastReport || !lastReport.report_id) return;
+    window.location.href = `/api/download/clean/${lastReport.report_id}`;
+  });
+
+  $('download-quarantine-btn').addEventListener('click', () => {
+    if (!lastReport || !lastReport.report_id) return;
+    window.location.href = `/api/download/quarantine/${lastReport.report_id}`;
   });
 
   // ── Reset ─────────────────────────────────────────────────────────────────

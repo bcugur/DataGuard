@@ -85,14 +85,17 @@ class UniquenessRule(AbstractQualityRule):
 
         seen: set[tuple[object, ...]] = set()
         duplicate_count = 0
-        for row in rows:
+        failed_row_indices_list: list[int] = []
+        for i, row in enumerate(rows):
             if row in seen:
                 duplicate_count += 1
+                failed_row_indices_list.append(i)
             else:
                 seen.add(row)
 
+        failed_row_indices = tuple(failed_row_indices_list)
         unique_count = total_count - duplicate_count
-        score = unique_count / total_count
+        score = unique_count / total_count if total_count > 0 else 1.0
 
         status = self._determine_status(score, threshold)
         col_label = (
@@ -115,6 +118,7 @@ class UniquenessRule(AbstractQualityRule):
             failed_count=duplicate_count,
             total_count=total_count,
             message=message,
+            failed_row_indices=failed_row_indices,
         )
 
     # ── Private helper ─────────────────────────────────────────────────────
@@ -128,21 +132,9 @@ class UniquenessRule(AbstractQualityRule):
         failed_count: int,
         total_count: int,
         message: str,
+        failed_row_indices: tuple[int, ...] = (),
     ) -> CheckResult:
-        """Construct the CheckResult value object.
-
-        Args:
-            rule: Source rule definition.
-            columns: Target column names.
-            score: Uniqueness score.
-            threshold: Required threshold.
-            failed_count: Number of duplicate rows.
-            total_count: Total rows evaluated.
-            message: Human-readable summary.
-
-        Returns:
-            An immutable CheckResult.
-        """
+        """Construct the CheckResult value object."""
         primary_column = columns[0] if len(columns) == 1 else None
         return CheckResult(
             rule_id=rule.id,
@@ -156,4 +148,5 @@ class UniquenessRule(AbstractQualityRule):
             total_count=total_count,
             severity=rule.severity,
             message=message,
+            failed_row_indices=failed_row_indices,
         )

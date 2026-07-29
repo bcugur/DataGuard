@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+
+import pandas as pd
 
 from dataguard.domain.entities.report import ValidationReport
 from dataguard.domain.entities.rule import QualityRule
@@ -22,6 +24,7 @@ from dataguard.domain.ports.notifier_port import INotifier
 from dataguard.domain.rules.completeness import CompletenessRule
 from dataguard.domain.rules.uniqueness import UniquenessRule
 from dataguard.domain.rules.validity import ValidityRule
+from dataguard.domain.services.cleanser import DataCleanser
 from dataguard.infrastructure.readers.csv_reader import CSVReader
 from dataguard.infrastructure.readers.excel_reader import ExcelReader
 from dataguard.infrastructure.readers.json_reader import JSONReader
@@ -202,9 +205,24 @@ async def validate(request: Request) -> JSONResponse:
             result = executor.check(rule, dataset, settings.default_threshold)
             report.add_result(result)
 
+        # ── Data Cleansing & Quarantine Split ──────────────────────────────
+        clean_ds, quarantine_ds = DataCleanser.split(dataset, report)
+
+        reports_dir = Path("reports")
+        reports_dir.mkdir(exist_ok=True)
+
+        clean_file_path = reports_dir / f"temiz_veri_{report.report_id}.xlsx"
+        quarantine_file_path = reports_dir / f"karantina_{report.report_id}.xlsx"
+
+        try:
+            pd.DataFrame(clean_ds.data).to_excel(clean_file_path, index=False, engine="openpyxl")
+            pd.DataFrame(quarantine_ds.data).to_excel(quarantine_file_path, index=False, engine="openpyxl")
+        except Exception as e:
+            logger.warning("Failed to write clean/quarantine Excel files: %s", e)
+
         # ── Persist JSON report ────────────────────────────────────────────
         writer = JSONReportWriter()
-        report_path = writer.write(report, Path("reports"))
+        report_path = writer.write(report, reports_dir)
         logger.info("Report saved: '%s'", report_path.name)
 
         # ── Return enriched dict ───────────────────────────────────────────
@@ -214,6 +232,8 @@ async def validate(request: Request) -> JSONResponse:
             "row_count": dataset.row_count,
             "column_count": dataset.column_count,
             "columns": list(dataset.columns),
+            "clean_row_count": clean_ds.row_count,
+            "quarantine_row_count": quarantine_ds.row_count,
         }
         return JSONResponse(content=response_data)
 
@@ -230,3 +250,29 @@ async def validate(request: Request) -> JSONResponse:
             tmp_data_path.unlink()
         if tmp_rules_path and tmp_rules_path.exists():
             tmp_rules_path.unlink()
+
+
+@router.get("/download/clean/{report_id}", summary="Download clean dataset as Excel")
+async def download_clean(report_id: str) -> FileResponse:
+    """Download the cleansed dataset containing only valid rows."""
+    file_path = Path("reports") / f"temiz_veri_{report_id}.xlsx"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Temiz veri dosyasi bulunamadi.")
+    return FileResponse(
+        str(file_path),
+        filename=f"temiz_veri_{report_id[:8]}.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@router.get("/download/quarantine/{report_id}", summary="Download quarantine dataset as Excel")
+async def download_quarantine(report_id: str) -> FileResponse:
+    """Download the quarantine dataset containing failed rows and violation reasons."""
+    file_path = Path("reports") / f"karantina_{report_id}.xlsx"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Karantina dosyasi bulunamadi.")
+    return FileResponse(
+        str(file_path),
+        filename=f"karantina_verisi_{report_id[:8]}.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )

@@ -136,21 +136,40 @@ class AbstractQualityRule(ABC):
         return "passed" if score >= threshold else "failed"
 
     @staticmethod
+    def _build_result(
+        rule: QualityRule,
+        column: str | None,
+        score: float,
+        threshold: Threshold,
+        failed_count: int,
+        total_count: int,
+        message: str,
+        failed_row_indices: tuple[int, ...] = (),
+    ) -> CheckResult:
+        """Construct a CheckResult instance."""
+        status = AbstractQualityRule._determine_status(score, threshold)
+        return CheckResult(
+            rule_id=rule.id,
+            rule_name=rule.name,
+            rule_type=rule.rule_type,
+            column=column,
+            status=status,
+            score=score,
+            threshold=threshold,
+            failed_count=failed_count,
+            total_count=total_count,
+            severity=rule.severity,
+            message=message,
+            failed_row_indices=failed_row_indices,
+        )
+
+    @staticmethod
     def _make_skipped_result(
         rule: QualityRule,
         threshold: Threshold,
         missing_column: str,
     ) -> CheckResult:
-        """Build a CheckResult with status='skipped' for a missing column.
-
-        Args:
-            rule: The rule that was skipped.
-            threshold: The resolved threshold for this rule.
-            missing_column: The column that was not found.
-
-        Returns:
-            CheckResult with score=0.0, failed_count=0, total_count=0.
-        """
+        """Build a CheckResult with status='skipped' for a missing column."""
         return CheckResult(
             rule_id=rule.id,
             rule_name=rule.name,
@@ -163,4 +182,5 @@ class AbstractQualityRule(ABC):
             total_count=0,
             severity=rule.severity,
             message=f"Column '{missing_column}' not found in dataset — rule skipped.",
+            failed_row_indices=(),
         )

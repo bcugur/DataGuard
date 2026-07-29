@@ -143,6 +143,7 @@ class ValidityRule(AbstractQualityRule):
             failed_count=failed_count,
             total_count=total_count,
             message=message,
+            failed_row_indices=tuple(sorted(failed_indices)),
         )
 
     # ── Dispatcher ─────────────────────────────────────────────────────────
@@ -282,6 +283,7 @@ class ValidityRule(AbstractQualityRule):
         failed_count: int,
         total_count: int,
         message: str,
+        failed_row_indices: tuple[int, ...] = (),
     ) -> CheckResult:
         """Construct the CheckResult value object."""
         return CheckResult(
@@ -296,4 +298,5 @@ class ValidityRule(AbstractQualityRule):
             total_count=total_count,
             severity=rule.severity,
             message=message,
+            failed_row_indices=failed_row_indices,
         )

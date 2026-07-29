@@ -61,6 +61,7 @@ class CheckResult:
     total_count: int
     severity: Severity
     message: str
+    failed_row_indices: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         """Enforce value object invariants."""

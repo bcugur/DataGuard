@@ -77,7 +77,8 @@ class CompletenessRule(AbstractQualityRule):
                 message="Column has no rows — vacuously complete.",
             )
 
-        missing_count = sum(1 for v in values if self._is_missing(v))
+        failed_row_indices = tuple(i for i, v in enumerate(values) if self._is_missing(v))
+        missing_count = len(failed_row_indices)
         score = (total_count - missing_count) / total_count
 
         status = self._determine_status(score, threshold)
@@ -98,6 +99,7 @@ class CompletenessRule(AbstractQualityRule):
             failed_count=missing_count,
             total_count=total_count,
             message=message,
+            failed_row_indices=failed_row_indices,
         )
 
     # ── Private helpers ────────────────────────────────────────────────────
@@ -162,21 +164,9 @@ class CompletenessRule(AbstractQualityRule):
         failed_count: int,
         total_count: int,
         message: str,
+        failed_row_indices: tuple[int, ...] = (),
     ) -> CheckResult:
-        """Construct the CheckResult value object.
-
-        Args:
-            rule: Source rule definition.
-            column: Target column name.
-            score: Completeness score.
-            threshold: Required threshold.
-            failed_count: Number of missing values.
-            total_count: Total values evaluated.
-            message: Human-readable summary.
-
-        Returns:
-            An immutable CheckResult.
-        """
+        """Construct the CheckResult value object."""
         return CheckResult(
             rule_id=rule.id,
             rule_name=rule.name,
@@ -189,4 +179,5 @@ class CompletenessRule(AbstractQualityRule):
             total_count=total_count,
             severity=rule.severity,
             message=message,
+            failed_row_indices=failed_row_indices,
         )
