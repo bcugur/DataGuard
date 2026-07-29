@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataGuard — Veri Kalite Platformu</title>
+  <meta name="description" content="Veri setlerinizi yapılandırılabilir kalite kurallarıyla doğrulayın. Gerçek zamanlı tamlık, tekrarsızlık ve geçerlilik kontrolleri." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #06060f;
+      --surface:   rgba(255,255,255,0.04);
+      --border:    rgba(255,255,255,0.08);
+      --border-h:  rgba(255,255,255,0.16);
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --cyan:      #06b6d4;
+      --violet:    #8b5cf6;
+      --indigo:    #6366f1;
+      --emerald:   #10b981;
+      --rose:      #f43f5e;
+      --amber:     #f59e0b;
+      --grad:      linear-gradient(135deg, #06b6d4, #8b5cf6);
+      --grad-r:    linear-gradient(135deg, #8b5cf6, #06b6d4);
+      --shadow:    0 25px 50px rgba(0,0,0,0.6);
+      --r:         16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(6,182,212,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 60% 40%, rgba(139,92,246,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      animation: bgPulse 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgPulse {
+      0%   { opacity: 0.7; }
+      100% { opacity: 1.0; }
+    }
+
+    /* ── Layout ── */
+    .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 0 48px;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+    }
+
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: var(--grad);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 24px rgba(99,102,241,0.4);
+    }
+
+    .logo span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .badge {
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 20px; letter-spacing: 0.5px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: var(--indigo);
+    }
+
+    nav { display: flex; gap: 24px; align-items: center; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+    nav a:hover { color: var(--text); }
+    .nav-btn {
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer; transition: all .2s; text-decoration: none;
+    }
+    .nav-btn:hover { border-color: var(--border-h); background: rgba(255,255,255,0.08); }
+
+    /* ── Hero ── */
+    .hero { text-align: center; margin-bottom: 56px; }
+    .hero h1 {
+      font-size: clamp(36px, 5vw, 58px); font-weight: 900; letter-spacing: -2px; line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 18px; color: var(--muted); max-width: 520px; margin: 0 auto; line-height: 1.7; }
+
+    /* ── Upload section ── */
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+
+    .upload-card {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--r);
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--grad); opacity: 0; transition: opacity .3s;
+    }
+
+    .upload-card:hover, .upload-card.drag-over {
+      border-color: var(--indigo);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(99,102,241,0.15);
+    }
+
+    .upload-card:hover::before, .upload-card.drag-over::before { opacity: 0.04; }
+    .upload-card.has-file { border-color: var(--emerald); border-style: solid; }
+    .upload-card.has-file::before { background: linear-gradient(135deg, #10b981, #06b6d4); opacity: 0.06; }
+
+    .upload-card input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .upload-icon {
+      width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      transition: all .3s; position: relative; z-index: 1;
+    }
+
+    .upload-card:hover .upload-icon, .upload-card.has-file .upload-icon {
+      background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3);
+    }
+
+    .upload-card.has-file .upload-icon { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); }
+
+    .upload-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; position: relative; z-index: 1; }
+    .upload-sub { font-size: 13px; color: var(--muted); position: relative; z-index: 1; }
+    .upload-filename {
+      margin-top: 12px; font-size: 12px; font-weight: 600;
+      color: var(--emerald); position: relative; z-index: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin-left: auto; margin-right: auto;
+    }
+
+    /* ── Validate Button ── */
+    .btn-wrap { display: flex; justify-content: center; margin-bottom: 60px; }
+
+    #validate-btn {
+      position: relative; padding: 18px 64px;
+      font-size: 16px; font-weight: 700; letter-spacing: 0.3px;
+      color: #fff; border: none; border-radius: 14px; cursor: pointer;
+      background: var(--grad);
+      box-shadow: 0 0 40px rgba(99,102,241,0.35), 0 8px 32px rgba(0,0,0,0.4);
+      transition: all .3s; overflow: hidden;
+    }
+
+    #validate-btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--grad-r); opacity: 0; transition: opacity .4s;
+    }
+    #validate-btn:hover::before { opacity: 1; }
+    #validate-btn:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(99,102,241,0.5), 0 16px 48px rgba(0,0,0,0.5); }
+    #validate-btn:active { transform: translateY(0); }
+    #validate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-text { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
+
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #validate-btn.loading .spinner { display: block; }
+    #validate-btn.loading .btn-label { display: none; }
+
+    /* ── Error banner ── */
+    #error-banner {
+      display: none; margin-bottom: 32px;
+      background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
+      border-radius: 12px; padding: 16px 20px;
+      color: #fda4af; font-size: 14px; font-weight: 500;
+    }
+
+    /* ── Results section ── */
+    #results { display: none; animation: fadeUp .6s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Score row ── */
+    .score-row {
+      display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 40px; margin-bottom: 20px;
+    }
+
+    /* ── Gauge ── */
+    .gauge-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+    .gauge-svg { transform: rotate(-90deg); }
+
+    .gauge-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+    .gauge-fill {
+      fill: none; stroke-width: 10; stroke-linecap: round;
+      stroke-dasharray: 502;
+      stroke-dashoffset: 502;
+      transition: stroke-dashoffset 1.4s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.6s;
+    }
+
+    .gauge-center {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .gauge-score { font-size: 36px; font-weight: 900; letter-spacing: -2px; }
+    .gauge-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+    /* ── Score info ── */
+    .score-info h2 { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: 30px; font-size: 13px; font-weight: 700;
+      letter-spacing: 0.5px; margin-bottom: 24px;
+    }
+    .status-pill.passed { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); color: #34d399; }
+    .status-pill.failed { background: rgba(244,63,94,0.15); border: 1px solid rgba(244,63,94,0.35); color: #fb7185; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 1.5s infinite; }
+    .passed .status-dot { background: var(--emerald); }
+    .failed .status-dot { background: var(--rose); }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    .score-meta { display: flex; gap: 32px; }
+    .score-meta-item { }
+    .score-meta-item .val { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+    .score-meta-item .lbl { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+    .val.green { color: var(--emerald); }
+    .val.red   { color: var(--rose); }
+    .val.dim   { color: var(--muted); }
+
+    /* ── Stats grid ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 24px 20px;
+      transition: transform .2s, border-color .2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: var(--border-h); }
+    .stat-card .s-val { font-size: 36px; font-weight: 900; letter-spacing: -2px; }
+    .stat-card .s-lbl { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card.c-pass .s-val { color: var(--emerald); }
+    .stat-card.c-fail .s-val { color: var(--rose); }
+    .stat-card.c-skip .s-val { color: var(--amber); }
+    .stat-card.c-total .s-val { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    /* ── Dataset info card ── */
+    .meta-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 20px 24px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 32px; flex-wrap: wrap;
+    }
+    .meta-item { display: flex; flex-direction: column; gap: 4px; }
+    .meta-item .m-lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-item .m-val { font-size: 15px; font-weight: 700; }
+    .meta-sep { width: 1px; height: 32px; background: var(--border); }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden;
+    }
+
+    .table-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-header h3 { font-size: 15px; font-weight: 700; }
+    .table-header span { font-size: 13px; color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 12px 20px; text-align: left;
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+    }
+
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    tbody td { padding: 16px 20px; font-size: 13px; vertical-align: middle; }
+
+    .rule-name { font-weight: 600; color: var(--text); }
+    .col-name  { font-family: monospace; font-size: 12px; color: var(--cyan); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.3px; white-space: nowrap;
+    }
+    .chip.passed { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .chip.failed { background: rgba(244,63,94,0.15);  color: #fb7185; border: 1px solid rgba(244,63,94,0.25); }
+    .chip.skipped{ background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .chip.error  { background: rgba(244,63,94,0.12);  color: #fb7185; border: 1px solid rgba(244,63,94,0.2); }
+    .chip.warning{ background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+    .chip.info   { background: rgba(6,182,212,0.12);  color: #22d3ee; border: 1px solid rgba(6,182,212,0.2); }
+
+    .score-bar-wrap { display: flex; align-items: center; gap: 10px; min-width: 120px; }
+    .score-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .score-val { font-size: 12px; font-weight: 700; width: 36px; text-align: right; }
+
+    .msg-cell { max-width: 260px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Download btn ── */
+    .actions { display: flex; justify-content: flex-end; margin-top: 24px; gap: 12px; }
+    .action-btn {
+      padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .2s; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .action-btn:hover { border-color: var(--border-h); background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+    .action-btn.primary { background: var(--grad); border-color: transparent; }
+    .action-btn.primary:hover { opacity: 0.9; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center; padding: 40px 0 20px;
+      font-size: 13px; color: var(--muted); border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+    footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .upload-grid { grid-template-columns: 1fr; }
+      .stats-grid  { grid-template-columns: 1fr 1fr; }
+      .score-row   { grid-template-columns: 1fr; text-align: center; }
+      .score-meta  { justify-content: center; }
+      nav a        { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <span>DataGuard</span>
+      <div class="badge">MVP</div>
+    </div>
+    <nav>
+      <a href="/api/docs" target="_blank">API Dokümantasyonu</a>
+      <a href="https://github.com" target="_blank" class="nav-btn">GitHub</a>
+    </nav>
+  </header>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <h1>Veri Kalitesi,<br /><span>Taviz Vermeden</span></h1>
+    <p>Veri dosyanızı yükleyin. Tamlık, tekrarsızlık ve geçerlilik kontrollerini anında görüntüleyin.</p>
+  </section>
+
+  <!-- ── Upload ── -->
+  <div class="upload-grid">
+
+    <div class="upload-card" id="data-card">
+      <input type="file" id="data-file" accept=".csv,.json" />
+      <div class="upload-icon" id="data-icon">&#128202;</div>
+      <div class="upload-title">Veri Dosyası</div>
+      <div class="upload-sub">Doğrulanacak veri &mdash; CSV veya JSON<br/><small style="opacity:0.6">Müşteri listesi, sipariş tablosu, ürün kataloğu...</small></div>
+      <div class="upload-filename" id="data-name" style="display:none"></div>
+    </div>
+
+    <div class="upload-card optional-card" id="rules-card">
+      <input type="file" id="rules-file" accept=".yaml,.yml" />
+      <div class="upload-icon" id="rules-icon">&#128203;</div>
+      <div class="upload-title">Kural Dosyası <span style="font-size:11px;color:var(--indigo);font-weight:600;background:rgba(99,102,241,0.15);padding:2px 8px;border-radius:10px;margin-left:6px">Opsiyonel</span></div>
+      <div class="upload-sub">Özel YAML kural dosyanız &mdash; yüklemezseniz otomatik oluşturulur<br/><small style="opacity:0.6">Örn: rules/example_rules.yaml</small></div>
+      <div class="upload-filename" id="rules-name" style="display:none"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Column preview ── -->
+  <div id="columns-section" style="display:none; margin-bottom:32px; animation: fadeUp .5s ease">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px">
+      <div>
+        <h3 style="font-size:15px; font-weight:700; margin-bottom:4px">Otomatik Kural Seçimi</h3>
+        <p style="font-size:13px; color:var(--muted)">Aşağıdaki sütunlar için uygulamak istediğiniz kalite kurallarını seçebilirsiniz:</p>
+      </div>
+      <button id="select-all-btn" style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">Tümünü Seç</button>
+    </div>
+    <div id="columns-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px"></div>
+  </div>
+
+  <!-- ── Validate Button ── -->
+  <div class="btn-wrap">
+    <button id="validate-btn" disabled>
+      <div class="btn-text">
+        <div class="spinner"></div>
+        <span class="btn-label">Doğrulamayı Başlat</span>
+      </div>
+    </button>
+  </div>
+
+  <!-- ── Error banner ── -->
+  <div id="error-banner"></div>
+
+  <!-- ── Results ── -->
+  <div id="results">
+
+    <!-- Score row -->
+    <div class="score-row">
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" width="180" height="180" viewBox="0 0 180 180">
+          <circle class="gauge-bg" cx="90" cy="90" r="80" />
+          <circle class="gauge-fill" id="gauge-fill" cx="90" cy="90" r="80" />
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-score" id="gauge-score">0.00</div>
+          <div class="gauge-label">Genel Skor</div>
+        </div>
+      </div>
+
+      <div class="score-info">
+        <h2 id="result-source">Doğrulama Tamamlandı</h2>
+        <div class="status-pill" id="status-pill">
+          <div class="status-dot"></div>
+          <span id="status-text">—</span>
+        </div>
+        <div class="score-meta">
+          <div class="score-meta-item">
+            <div class="val green" id="meta-passed">—</div>
+            <div class="lbl">Geçen Kural</div>
+          </div>
+          <div class="score-meta-item">
+            <div class="val red" id="meta-failed">—</div>
+            <div class="lbl">Başarısız Kural</div>
+          </div>
+          <div class="score-meta-item">
+            <div class="val dim" id="meta-total">—</div>
+            <div class="lbl">Toplam Kural</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid">
+      <div class="stat-card c-pass">
+        <div class="s-val" id="card-passed">0</div>
+        <div class="s-lbl">Geçen Kural</div>
+      </div>
+      <div class="stat-card c-fail">
+        <div class="s-val" id="card-failed">0</div>
+        <div class="s-lbl">Başarısız Kural</div>
+      </div>
+      <div class="stat-card c-skip">
+        <div class="s-val" id="card-skipped">0</div>
+        <div class="s-lbl">Atlanan Kural</div>
+      </div>
+      <div class="stat-card c-total">
+        <div class="s-val" id="card-rows">0</div>
+        <div class="s-lbl">Veri Satırı</div>
+      </div>
+    </div>
+
+    <!-- Dataset meta -->
+    <div class="meta-card">
+      <div class="meta-item">
+        <div class="m-lbl">Kaynak Dosya</div>
+        <div class="m-val" id="meta-source">—</div>
+      </div>
+      <div class="meta-sep"></div>
+      <div class="meta-item">
+        <div class="m-lbl">Kural Dosyası</div>
+        <div class="m-val" id="meta-rules">—</div>
+      </div>
+      <div class="meta-sep"></div>
+      <div class="meta-item">
+        <div class="m-lbl">Sütun Sayısı</div>
+        <div class="m-val" id="meta-cols">—</div>
+      </div>
+      <div class="meta-sep"></div>
+      <div class="meta-item">
+        <div class="m-lbl">Çalışma Zamanı</div>
+        <div class="m-val" id="meta-time">—</div>
+      </div>
+      <div class="meta-sep"></div>
+      <div class="meta-item">
+        <div class="m-lbl">Rapor ID</div>
+        <div class="m-val" id="meta-id">—</div>
+      </div>
+    </div>
+
+    <!-- Results table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Kural Sonuçları</h3>
+        <span id="table-sub">— kural çalıştırıldı</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Kural</th>
+            <th>Sütun</th>
+            <th>Durum</th>
+            <th>Skor</th>
+            <th>Eşik Değer</th>
+            <th>Öncelik</th>
+            <th>Detay</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="action-btn" id="reset-btn">Yeni Doğrulama</button>
+      <button class="action-btn primary" id="download-btn">Raporu İndir (JSON)</button>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>DataGuard</span> ile geliştirildi &mdash; Hexagonal Mimari + DDD &mdash; Python 3.11+
+  </footer>
+
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let lastReport = null;
+
+  const $ = id => document.getElementById(id);
+
+  // ── File Upload Handling ───────────────────────────────────────────────
+  function setupUpload(cardId, inputId, nameId, iconId, label) {
+    const card  = $(cardId);
+    const input = $(inputId);
+    const name  = $(nameId);
+    const icon  = $(iconId);
+
+    input.addEventListener('change', () => {
+      if (input.files[0]) setFile(card, name, icon, input.files[0].name, label);
+    });
+
+    card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault(); card.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) {
+        const file = e.dataTransfer.files[0];
+        const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+        setFile(card, name, icon, file.name, label);
+      }
+    });
+  }
+
+  function setFile(card, nameEl, iconEl, filename, type) {
+    card.classList.add('has-file');
+    nameEl.textContent = filename;
+    nameEl.style.display = 'block';
+    iconEl.textContent = '✅';
+    checkReady();
+    if (type === 'data') {
+      loadPreview();
+    }
+  }
+
+  setupUpload('data-card',  'data-file',  'data-name',  'data-icon',  'data');
+  setupUpload('rules-card', 'rules-file', 'rules-name', 'rules-icon', 'rules');
+
+  function checkReady() {
+    const hasData = $('data-file').files.length > 0;
+    $('validate-btn').disabled = !hasData;
+  }
+
+  async function loadPreview() {
+    const file = $('data-file').files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('data_file', file);
+    try {
+      const res = await fetch('/api/preview', { method: 'POST', body: form });
+      if (!res.ok) return;
+      const data = await res.json();
+      renderPreview(data.columns || []);
+    } catch(e) { console.error('Preview error', e); }
+  }
+
+  function renderPreview(columns) {
+    const grid = $('columns-grid');
+    grid.innerHTML = '';
+    columns.forEach(col => {
+      const div = document.createElement('div');
+      div.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;';
+      div.innerHTML = `
+        <div style="font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span>${esc(col.name)}</span>
+          <span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">${esc(col.kind)}</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.1);color:#34d399;padding:4px 8px;border-radius:6px">
+            <input type="checkbox" class="rule-cb" data-col="${esc(col.name)}" data-type="completeness" checked /> Tamlık (Eksiksizlik)
+          </label>
+          <label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:rgba(139,92,246,0.1);color:#a78bfa;padding:4px 8px;border-radius:6px">
+            <input type="checkbox" class="rule-cb" data-col="${esc(col.name)}" data-type="uniqueness" checked /> Tekrarsızlık (Benzersizlik)
+          </label>
+        </div>
+      `;
+      grid.appendChild(div);
+    });
+    $('columns-section').style.display = 'block';
+  }
+
+  // Tümünü Seç / Seçimi Kaldır butonu
+  let allSelected = true;
+  $('select-all-btn').addEventListener('click', () => {
+    allSelected = !allSelected;
+    document.querySelectorAll('.rule-cb').forEach(cb => { cb.checked = allSelected; });
+    $('select-all-btn').textContent = allSelected ? 'Tümünü Kaldır' : 'Tümünü Seç';
+  });
+
+  // ── Validate ────────────────────────────────────────────────────────────
+  $('validate-btn').addEventListener('click', async () => {
+    const btn = $('validate-btn');
+    const err = $('error-banner');
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    err.style.display = 'none';
+    $('results').style.display = 'none';
+
+    const form = new FormData();
+    form.append('data_file', $('data-file').files[0]);
+    if ($('rules-file').files[0]) {
+      form.append('rules_file', $('rules-file').files[0]);
+    } else {
+      // Build selected rules from UI checkboxes
+      const selectedRules = [];
+      document.querySelectorAll('.rule-cb:checked').forEach(cb => {
+        selectedRules.push({
+          column: cb.dataset.col,
+          type: cb.dataset.type,
+          threshold: cb.dataset.type === 'uniqueness' ? 1.0 : 0.8,
+          severity: cb.dataset.type === 'uniqueness' ? 'error' : 'warning'
+        });
+      });
+      if (selectedRules.length > 0) {
+        form.append('rules_json', JSON.stringify(selectedRules));
+      }
+    }
+
+    try {
+      const res = await fetch('/api/validate', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (!res.ok) {
+        let msg = 'Sunucu hatası';
+        if (typeof data.detail === 'string') {
+          msg = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          msg = data.detail.map(d => d.msg || JSON.stringify(d)).join(', ');
+        } else if (data.detail) {
+          msg = JSON.stringify(data.detail);
+        }
+        throw new Error(msg);
+      }
+
+      lastReport = data;
+      renderResults(data);
+
+    } catch (e) {
+      err.textContent = '⚠ ' + e.message;
+      err.style.display = 'block';
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  });
+
+  // ── Render Results ──────────────────────────────────────────────────────
+  function renderResults(data) {
+    const s = data.summary;
+    const meta = data.meta || {};
+
+    // Overall status
+    const passed = s.overall_status === 'passed';
+    const pill = $('status-pill');
+    pill.className = 'status-pill ' + (passed ? 'passed' : 'failed');
+    $('status-text').textContent = passed ? 'DOĞRULAMA BAŞARILI' : 'DOĞRULAMA BAŞARISIZ';
+
+    // Gauge
+    const score = s.overall_score;
+    const circ  = 502;
+    const offset = circ * (1 - score);
+    const gFill = $('gauge-fill');
+    const colour = score >= 0.8 ? '#10b981' : score >= 0.6 ? '#f59e0b' : '#f43f5e';
+    gFill.style.stroke = colour;
+    setTimeout(() => { gFill.style.strokeDashoffset = offset; }, 100);
+
+    // Score number counter
+    animateNumber('gauge-score', 0, score, 1400, v => v.toFixed(3));
+
+    // Score info
+    $('result-source').textContent = data.source_path || 'Doğrulama Tamamlandı';
+    $('meta-passed').textContent = s.passed_rules;
+    $('meta-failed').textContent = s.failed_rules;
+    $('meta-total').textContent  = s.total_rules;
+
+    // Stat cards
+    $('card-passed').textContent  = s.passed_rules;
+    $('card-failed').textContent  = s.failed_rules;
+    $('card-skipped').textContent = s.skipped_rules;
+    $('card-rows').textContent    = meta.row_count || '—';
+
+    // Meta bar
+    $('meta-source').textContent = data.source_path || '—';
+    $('meta-rules').textContent  = data.rules_path  || '—';
+    $('meta-cols').textContent   = meta.column_count ? `${meta.column_count} sütun` : '—';
+    $('meta-time').textContent   = data.executed_at ? new Date(data.executed_at).toLocaleString() : '—';
+    $('meta-id').textContent     = data.report_id ? data.report_id.slice(0,8) + '…' : '—';
+
+    // Table
+    $('table-sub').textContent = `${s.total_rules} kural çalıştırıldı`;
+    const tbody = $('results-body');
+    tbody.innerHTML = '';
+
+    const statusTR = { passed: 'GEÇTİ', failed: 'BAŞARISIZ', skipped: 'ATLANDI' };
+    const ruleTypeTR = { completeness: 'Tamlık', uniqueness: 'Tekrarsızlık', validity: 'Geçerlilik' };
+    const severityTR = { error: 'Hata', warning: 'Uyarı', info: 'Bilgi' };
+
+    (data.results || []).forEach((r, i) => {
+      const row = document.createElement('tr');
+      row.style.animationDelay = `${i * 60}ms`;
+      row.style.animation = 'fadeUp .4s ease both';
+      const scoreColor = r.score >= r.threshold ? '#10b981' : '#f43f5e';
+      const barWidth = Math.round(r.score * 100);
+      const stText = statusTR[r.status] || r.status.toUpperCase();
+      const rType = ruleTypeTR[r.rule_type] || r.rule_type;
+      const sevText = severityTR[r.severity] || r.severity.toUpperCase();
+
+      row.innerHTML = `
+        <td><div class="rule-name">${esc(r.rule_name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(rType)}</div></td>
+        <td><span class="col-name">${esc(r.column || '—')}</span></td>
+        <td><span class="chip ${r.status}">${esc(stText)}</span></td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar-bg">
+              <div class="score-bar-fill" style="width:0%;background:${scoreColor}" data-w="${barWidth}"></div>
+            </div>
+            <div class="score-val" style="color:${scoreColor}">${r.score.toFixed(3)}</div>
+          </div>
+        </td>
+        <td style="color:var(--muted);font-size:13px">${r.threshold.toFixed(3)}</td>
+        <td><span class="chip ${r.severity}">${esc(sevText)}</span></td>
+        <td><div class="msg-cell">${esc(r.message)}</div></td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    // Animate bars after DOM paint
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.score-bar-fill').forEach(bar => {
+        setTimeout(() => { bar.style.width = bar.dataset.w + '%'; }, 200);
+      });
+    });
+
+    $('results').style.display = 'block';
+    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function animateNumber(id, from, to, duration, fmt) {
+    const el = $(id); const start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      el.textContent = fmt(from + (to - from) * ease);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ── Download ─────────────────────────────────────────────────────────────
+  $('download-btn').addEventListener('click', () => {
+    if (!lastReport) return;
+    const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `dataguard_report_${Date.now()}.json`;
+    a.click();
+  });
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  $('reset-btn').addEventListener('click', () => {
+    $('results').style.display = 'none';
+    $('columns-section').style.display = 'none';
+    $('data-file').value = '';
+    $('rules-file').value = '';
+    ['data-card','rules-card'].forEach(id => {
+      const c = $(id); c.classList.remove('has-file','drag-over');
+    });
+    $('data-name').style.display = 'none';
+    $('rules-name').style.display = 'none';
+    $('data-icon').textContent  = '📊';
+    $('rules-icon').textContent = '📋';
+    $('validate-btn').disabled = true;
+    lastReport = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+id,email,status,age
+1,alice@example.com,active,25
+2,bob@example.com,inactive,34
+3,carol@example.com,active,29
+4,dave@example.com,pending,41
+5,eve@example.com,active,22
+6,frank@example.com,active,30
+7,grace@example.com,inactive,28
+8,henry@example.com,pending,35
+9,iris@example.com,active,26
+10,jack@example.com,active,31

@@ -1,0 +1,53 @@
+version: "1.0"
+
+rules:
+  # ── Completeness Rules ──────────────────────────────────────────────────
+  - id: rule_001
+    name: email_completeness
+    type: completeness
+    column: email
+    threshold: 0.90
+    severity: error
+
+  # ── Uniqueness Rules ────────────────────────────────────────────────────
+  - id: rule_002
+    name: id_uniqueness
+    type: uniqueness
+    column: id
+    threshold: 1.0
+    severity: error
+
+  # ── Validity Rules ──────────────────────────────────────────────────────
+  - id: rule_003
+    name: status_validity
+    type: validity
+    column: status
+    validator: enum
+    params:
+      allowed_values:
+        - active
+        - inactive
+        - pending
+    threshold: 1.0
+    severity: warning
+
+  - id: rule_004
+    name: age_range
+    type: validity
+    column: age
+    validator: range
+    params:
+      min_value: 0
+      max_value: 150
+    threshold: 1.0
+    severity: error
+
+  - id: rule_005
+    name: email_format
+    type: validity
+    column: email
+    validator: regex
+    params:
+      pattern: '^[\w.+-]+@[\w-]+\.[\w.]+$'
+    threshold: 0.95
+    severity: warning
