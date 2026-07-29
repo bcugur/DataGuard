@@ -402,13 +402,15 @@
       <div class="upload-title">Kural Dosyası <span style="font-size:11px;color:var(--indigo);font-weight:600;background:rgba(99,102,241,0.15);padding:2px 8px;border-radius:10px;margin-left:6px">Opsiyonel</span></div>
       <div class="upload-sub">Özel YAML kural dosyanız &mdash; yüklemezseniz otomatik oluşturulur<br/><small style="opacity:0.6">Örn: rules/example_rules.yaml</small></div>
       <div class="upload-filename" id="rules-name" style="display:none"></div>
-      <div style="margin-top:12px;position:relative;z-index:10" onclick="event.stopPropagation()">
-        <button id="ai-modal-open-btn" style="background:linear-gradient(135deg, #8b5cf6, #ec4899);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(139,92,246,0.3)">
-          ✨ AI Kural Asistanı (Prompt)
-        </button>
-      </div>
     </div>
 
+  </div>
+
+  <!-- ── AI Rule Generator Banner ── -->
+  <div style="display:flex;justify-content:center;margin-top:-12px;margin-bottom:32px">
+    <button id="ai-modal-open-btn" style="background:linear-gradient(135deg, #a855f7, #ec4899);border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 24px;border-radius:30px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(168,85,247,0.35);transition:all .3s">
+      ✨ AI Kural Asistanı İle Kural Üret (Doğal Türkçe Prompt)
+    </button>
   </div>
 
   <!-- ── Column preview ── -->
