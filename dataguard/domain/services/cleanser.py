@@ -41,7 +41,8 @@ class DataCleanser:
                 for row_idx in result.failed_row_indices:
                     if row_idx not in quarantine_reasons:
                         quarantine_reasons[row_idx] = []
-                    quarantine_reasons[row_idx].append(f"{result.rule_name} ({result.message})")
+                    reason_msg = DataCleanser._format_row_reason(result, dataset, row_idx)
+                    quarantine_reasons[row_idx].append(reason_msg)
 
         quarantine_set = set(quarantine_reasons.keys())
 
@@ -54,7 +55,7 @@ class DataCleanser:
             if row_idx in quarantine_set:
                 for col in dataset.columns:
                     quarantine_data[col].append(dataset.data[col][row_idx])
-                reasons_str = "; ".join(quarantine_reasons[row_idx])
+                reasons_str = " | ".join(quarantine_reasons[row_idx])
                 quarantine_data[REASON_COLUMN].append(reasons_str)
             else:
                 for col in dataset.columns:
@@ -86,3 +87,19 @@ class DataCleanser:
         )
 
         return clean_ds, quarantine_ds
+
+    @staticmethod
+    def _format_row_reason(result: "CheckResult", dataset: Dataset, row_idx: int) -> str:  # noqa: F821
+        """Compose a human-readable Turkish violation description for a single row."""
+        col = result.column or "Genel"
+        val = dataset.data[col][row_idx] if col in dataset.data and row_idx < len(dataset.data[col]) else None
+        val_str = "boş" if val is None or str(val).strip() == "" else f"'{val}'"
+
+        if result.rule_type == "completeness":
+            return f"[{col}] Sütunu Eksik Veri ({val_str})"
+        elif result.rule_type == "uniqueness":
+            return f"[{col}] Sütununda Tekrarlayan Kayıt ({val_str})"
+        elif result.rule_type == "validity":
+            return f"[{col}] Sütununda Format/Değer Hatası ({val_str})"
+        else:
+            return f"[{col}] Kural İhlali: {result.rule_name}"

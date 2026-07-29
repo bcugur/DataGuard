@@ -66,5 +66,5 @@ def test_data_cleanser_splits_clean_and_quarantine_rows():
     assert quarantine_ds.row_count == 2
     assert quarantine_ds.data["id"] == [2, 3]
     assert REASON_COLUMN in quarantine_ds.columns
-    assert "name_tamlik" in str(quarantine_ds.data[REASON_COLUMN][0])
-    assert "age_aralik" in str(quarantine_ds.data[REASON_COLUMN][1])
+    assert "[name] Sütunu Eksik Veri (boş)" in str(quarantine_ds.data[REASON_COLUMN][0])
+    assert "[age] Sütununda Format/Değer Hatası ('-5')" in str(quarantine_ds.data[REASON_COLUMN][1])
