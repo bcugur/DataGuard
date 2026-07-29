@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from dataguard import __version__
+from dataguard.delivery.api.routes.ai_rules import router as ai_rules_router
 from dataguard.delivery.api.routes.preview import router as preview_router
 from dataguard.delivery.api.routes.validate import router as validate_router
 from dataguard.shared.logging import configure_logging, get_logger
@@ -44,6 +45,7 @@ app.add_middleware(
 # ── API routes ─────────────────────────────────────────────────────────────
 app.include_router(validate_router)
 app.include_router(preview_router)
+app.include_router(ai_rules_router)
 
 # ── Static files ───────────────────────────────────────────────────────────
 if _STATIC_DIR.exists():
