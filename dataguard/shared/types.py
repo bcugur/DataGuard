@@ -56,7 +56,11 @@ CheckStatus: TypeAlias = Literal["passed", "failed", "skipped"]
 OverallStatus: TypeAlias = Literal["passed", "failed"]
 """Aggregate validation outcome for an entire report."""
 
-ValidatorType: TypeAlias = Literal["regex", "enum", "dtype", "range"]
+ValidatorType: TypeAlias = Literal[
+    "regex", "enum", "dtype", "range",
+    "tckn", "tc_kimlik", "vkn", "vergi_no",
+    "tr_iban", "iban", "phone_tr", "telefon"
+]
 """Supported sub-validators for ValidityRule."""
 
 # ---------------------------------------------------------------------------

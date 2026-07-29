@@ -1,0 +1,39 @@
+# DataGuard — Türkiye Özel Doğrulama Kuralları Seti
+version: "1.0"
+
+rules:
+  # ── 1. TC Kimlik No Algoritmik Doğrulaması ────────────────────────────────
+  - id: tr_001
+    name: tckn_algoritma_kontrolu
+    type: validity
+    column: tc_kimlik
+    validator: tckn
+    threshold: 1.0
+    severity: error
+
+  # ── 2. Vergi Kimlik No (VKN) Algoritmik Doğrulaması ──────────────────────
+  - id: tr_002
+    name: vkn_algoritma_kontrolu
+    type: validity
+    column: vergi_no
+    validator: vkn
+    threshold: 1.0
+    severity: error
+
+  # ── 3. TR IBAN (MOD97 Checksum) Doğrulaması ──────────────────────────────
+  - id: tr_003
+    name: tr_iban_format_kontrolu
+    type: validity
+    column: iban_no
+    validator: tr_iban
+    threshold: 1.0
+    severity: error
+
+  # ── 4. Türkiye Mobil Telefon Numarası Doğrulaması ─────────────────────────
+  - id: tr_004
+    name: tr_telefon_format_kontrolu
+    type: validity
+    column: telefon
+    validator: phone_tr
+    threshold: 1.0
+    severity: warning

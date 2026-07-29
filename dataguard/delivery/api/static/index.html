@@ -623,6 +623,23 @@
     columns.forEach(col => {
       const div = document.createElement('div');
       div.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;';
+      
+      let presetHtml = '';
+      if (col.suggested_preset) {
+        const presetLabels = {
+          'tckn': '🇹🇷 TC Kimlik No',
+          'tr_iban': '🇹🇷 TR IBAN',
+          'phone_tr': '🇹🇷 TR Telefon',
+          'vkn': '🇹🇷 Vergi Kimlik No'
+        };
+        const pLabel = presetLabels[col.suggested_preset] || '🇹🇷 TR Format';
+        presetHtml = `
+          <label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.15);color:#f87171;padding:4px 8px;border-radius:6px">
+            <input type="checkbox" class="rule-cb" data-col="${esc(col.name)}" data-type="${esc(col.suggested_preset)}" checked /> ${esc(pLabel)}
+          </label>
+        `;
+      }
+
       div.innerHTML = `
         <div style="font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
           <span>${esc(col.name)}</span>
@@ -635,6 +652,7 @@
           <label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:rgba(139,92,246,0.1);color:#a78bfa;padding:4px 8px;border-radius:6px">
             <input type="checkbox" class="rule-cb" data-col="${esc(col.name)}" data-type="uniqueness" checked /> Tekrarsızlık (Benzersizlik)
           </label>
+          ${presetHtml}
         </div>
       `;
       grid.appendChild(div);
@@ -668,12 +686,24 @@
       // Build selected rules from UI checkboxes
       const selectedRules = [];
       document.querySelectorAll('.rule-cb:checked').forEach(cb => {
-        selectedRules.push({
-          column: cb.dataset.col,
-          type: cb.dataset.type,
-          threshold: cb.dataset.type === 'uniqueness' ? 1.0 : 0.8,
-          severity: cb.dataset.type === 'uniqueness' ? 'error' : 'warning'
-        });
+        const type = cb.dataset.type;
+        if (type === 'completeness' || type === 'uniqueness') {
+          selectedRules.push({
+            column: cb.dataset.col,
+            type: type,
+            threshold: type === 'uniqueness' ? 1.0 : 0.8,
+            severity: type === 'uniqueness' ? 'error' : 'warning'
+          });
+        } else {
+          // Preset validity rules (tckn, tr_iban, phone_tr, vkn)
+          selectedRules.push({
+            column: cb.dataset.col,
+            type: 'validity',
+            validator: type,
+            threshold: 1.0,
+            severity: 'error'
+          });
+        }
       });
       if (selectedRules.length > 0) {
         form.append('rules_json', JSON.stringify(selectedRules));

@@ -53,6 +53,12 @@ from dataguard.domain.entities.check_result import CheckResult
 from dataguard.domain.entities.dataset import Dataset
 from dataguard.domain.entities.rule import QualityRule
 from dataguard.domain.rules.base import AbstractQualityRule
+from dataguard.domain.validators.turkish import (
+    validate_phone_tr,
+    validate_tckn,
+    validate_tr_iban,
+    validate_vkn,
+)
 from dataguard.shared.exceptions import InvalidRuleSchemaError
 from dataguard.shared.types import Threshold
 
@@ -149,23 +155,20 @@ class ValidityRule(AbstractQualityRule):
     # ── Dispatcher ─────────────────────────────────────────────────────────
 
     def _validate(self, rule: QualityRule, values: list[object]) -> set[int]:
-        """Route to the correct sub-validator and return failing row indices.
-
-        Args:
-            rule: Rule definition carrying validator_type and params.
-            values: List of raw column values.
-
-        Returns:
-            Set of integer indices into ``values`` that failed validation.
-
-        Raises:
-            InvalidRuleSchemaError: If the validator_type is unsupported.
-        """
+        """Route to the correct sub-validator and return failing row indices."""
         validators = {
             "regex": self._validate_regex,
             "enum": self._validate_enum,
             "dtype": self._validate_dtype,
             "range": self._validate_range,
+            "tckn": self._validate_tckn,
+            "tc_kimlik": self._validate_tckn,
+            "vkn": self._validate_vkn,
+            "vergi_no": self._validate_vkn,
+            "tr_iban": self._validate_tr_iban,
+            "iban": self._validate_tr_iban,
+            "phone_tr": self._validate_phone_tr,
+            "telefon": self._validate_phone_tr,
         }
         validator_fn = validators.get(rule.validator_type or "")
         if validator_fn is None:
@@ -176,6 +179,38 @@ class ValidityRule(AbstractQualityRule):
         return validator_fn(values, rule.params)
 
     # ── Sub-validators ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _validate_tckn(values: list[object], params: dict[str, Any]) -> set[int]:
+        failed = set()
+        for i, val in enumerate(values):
+            if not validate_tckn(val):
+                failed.add(i)
+        return failed
+
+    @staticmethod
+    def _validate_vkn(values: list[object], params: dict[str, Any]) -> set[int]:
+        failed = set()
+        for i, val in enumerate(values):
+            if not validate_vkn(val):
+                failed.add(i)
+        return failed
+
+    @staticmethod
+    def _validate_tr_iban(values: list[object], params: dict[str, Any]) -> set[int]:
+        failed = set()
+        for i, val in enumerate(values):
+            if not validate_tr_iban(val):
+                failed.add(i)
+        return failed
+
+    @staticmethod
+    def _validate_phone_tr(values: list[object], params: dict[str, Any]) -> set[int]:
+        failed = set()
+        for i, val in enumerate(values):
+            if not validate_phone_tr(val):
+                failed.add(i)
+        return failed
 
     @staticmethod
     def _validate_regex(values: list[object], params: dict[str, Any]) -> set[int]:

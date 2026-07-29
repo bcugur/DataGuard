@@ -50,6 +50,20 @@ def _is_id_column(col: str) -> bool:
     return any(kw in col_lower for kw in _ID_KEYWORDS)
 
 
+def _infer_suggested_preset(col: str) -> str | None:
+    """Infer Turkish preset validator based on column name hints."""
+    lower = col.lower()
+    if any(k in lower for k in ("tc", "tckn", "kimlik")):
+        return "tckn"
+    if "iban" in lower:
+        return "tr_iban"
+    if any(k in lower for k in ("tel", "telefon", "phone", "gsm", "cep")):
+        return "phone_tr"
+    if any(k in lower for k in ("vkn", "vergi")):
+        return "vkn"
+    return None
+
+
 @router.post("/preview", summary="Preview columns from an uploaded data file")
 async def preview(request: Request) -> JSONResponse:
     """Read the uploaded file and return column metadata."""
@@ -94,6 +108,7 @@ async def preview(request: Request) -> JSONResponse:
                     "name": col,
                     "kind": kind,
                     "is_id_like": _is_id_column(col),
+                    "suggested_preset": _infer_suggested_preset(col),
                     "null_count": sum(1 for v in dataset.data.get(col, []) if v is None),
                     "sample": [str(v) for v in values[:5] if v is not None],
                 }
