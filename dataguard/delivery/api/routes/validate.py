@@ -95,7 +95,7 @@ def _rules_from_json(raw: list[dict[str, Any]]) -> list[QualityRule]:
                 column=col or None,
                 threshold=float(item.get("threshold", 0.80)),
                 severity=item.get("severity", "warning"),  # type: ignore[arg-type]
-                validator_type=item.get("validator"),  # type: ignore[arg-type]
+                validator_type=item.get("validator") or item.get("validator_type"),  # type: ignore[arg-type]
                 params=item.get("params", {}),
             )
         )

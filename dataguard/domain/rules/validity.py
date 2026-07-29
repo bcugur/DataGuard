@@ -156,6 +156,13 @@ class ValidityRule(AbstractQualityRule):
 
     def _validate(self, rule: QualityRule, values: list[object]) -> set[int]:
         """Route to the correct sub-validator and return failing row indices."""
+        raw_vtype = (
+            rule.validator_type
+            or str(rule.params.get("validator", ""))
+            or str(rule.params.get("validator_type", ""))
+        )
+        v_type = str(raw_vtype).strip().lower() if raw_vtype else ""
+
         validators = {
             "regex": self._validate_regex,
             "enum": self._validate_enum,
@@ -170,11 +177,11 @@ class ValidityRule(AbstractQualityRule):
             "phone_tr": self._validate_phone_tr,
             "telefon": self._validate_phone_tr,
         }
-        validator_fn = validators.get(rule.validator_type or "")
+        validator_fn = validators.get(v_type)
         if validator_fn is None:
             raise InvalidRuleSchemaError(
                 rule_id=rule.id,
-                missing_fields=[f"validator_type='{rule.validator_type}' (unsupported)"],
+                missing_fields=[f"validator_type='{v_type}' (unsupported)"],
             )
         return validator_fn(values, rule.params)
 
